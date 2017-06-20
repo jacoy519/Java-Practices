@@ -1,5 +1,7 @@
 package com.demo.builder;
 
+import com.google.gson.annotations.Since;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
@@ -10,94 +12,106 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Created by medivh on 2017/6/19.
  */
+
 public class JavaObjectBuilder {
 
-    private String className;
+    private Type rootType;
 
     private Map<String, Object> javaObjectCache = new ConcurrentHashMap<String, Object>();
 
-    public JavaObjectBuilder(String className) {
-        this.className = className;
+    private Set<String> preparedJavaObjectRecord = new HashSet<String>();
+
+    public JavaObjectBuilder(Type rootType) {
+        this.rootType = rootType;
     }
 
-    public Object build() {
-        return doBuild(this.className);
+    public Object build() throws Exception {
+        return doBuild(rootType);
     }
 
-    private Object doBuild(String className) {
-
-        if(javaObjectCache.containsKey(className)) {
-            return javaObjectCache.get(className);
-        }
-        if(isObject(className)) {
+    private Object doBuild(Type type) throws Exception {
+        if(preparedJavaObjectRecord.contains(type.getTypeName())) {
             return null;
         }
-        if(isByte(className) || isShort(className) || isInteger(className) || isLong(className)) {
-            return 0;
+        if(javaObjectCache.containsKey(type.getTypeName())) {
+            return javaObjectCache.get(type.getTypeName());
         }
-        if(isFloat(className) || isDouble(className)) {
-            return 0.0;
-        }
-        if(isBoolean(className)) {
-            return true;
-        }
-        if(isString(className)) {
-            return "string";
-        }
-        Object instance = null;
-        try {
-            Class clazz = Class.forName(className);
-            if(clazz.isInterface()) {
+
+        if(type instanceof ParameterizedType) {
+            ParameterizedType pt = (ParameterizedType) type;
+            if(isList(pt.getRawType().getTypeName())) {
+                List<Object> list = new ArrayList<Object>();
+                Type tp1 = pt.getActualTypeArguments()[0];
+                list.add(doBuild(tp1));
+                javaObjectCache.put(type.getTypeName(), list);
+                return list;
+            }
+
+            if(isSet(pt.getRawType().getTypeName())) {
+                Set<Object> set = new HashSet<Object>();
+                Type tp1 = pt.getActualTypeArguments()[0];
+                set.add(doBuild(tp1));
+                javaObjectCache.put(type.getTypeName(), set);
+                return set;
+            }
+            if(isMap(pt.getRawType().getTypeName())) {
+                Map<Object, Object> map = new HashMap<Object, Object>();
+                Type tp1 = pt.getActualTypeArguments()[0];
+                Type tp2 = pt.getActualTypeArguments()[1];
+                map.put(doBuild(tp1), doBuild(tp2));
+                javaObjectCache.put(type.getTypeName(), map);
+                return map;
+            }
+            Object object = doBuild(pt.getRawType());
+            javaObjectCache.put(type.getTypeName(), object);
+            return object;
+        } else {
+            if(isObject(type.getTypeName())) {
                 return null;
             }
-            instance = clazz.newInstance();
-            Field[] fields =clazz.getDeclaredFields();
-            for(Field field : fields) {
-                field.setAccessible(true);
-                Object value = null;
-                if(Modifier.isStatic(field.getModifiers())) {
-                    continue;
-                }
-                if(isList(field.getType())) {
-                    List<Object> list = new ArrayList<Object>();
-                    Type genericType = field.getGenericType();
-                    if(genericType != null && genericType instanceof ParameterizedType){
-                        ParameterizedType pt = (ParameterizedType) genericType;
-                        Class<?> genericClazz = (Class<?>)pt.getActualTypeArguments()[0];
-                        list.add(doBuild(genericClazz.getName()));
-                    }
-                    value = list;
-                } else if(isSet(field.getType())) {
-                    Set<Object> set = new HashSet<Object>();
-                    Type genericType = field.getGenericType();
-                    if(genericType != null && genericType instanceof ParameterizedType){
-                        ParameterizedType pt = (ParameterizedType) genericType;
-                        Class<?> genericClazz = (Class<?>)pt.getActualTypeArguments()[0];
-                        set.add(doBuild(genericClazz.getName()));
-                    }
-                    value = set;
-                } else if(isMap(field.getType())) {
-                    Map<Object, Object> map = new HashMap<Object, Object>();
-                    Type genericType = field.getGenericType();
-                    if(genericType != null && genericType instanceof ParameterizedType){
-                        ParameterizedType pt = (ParameterizedType) genericType;
-                        Class<?> keyClazz = (Class<?>)pt.getActualTypeArguments()[0];
-                        Class<?> valueClazz = (Class<?>)pt.getActualTypeArguments()[1];
-                        map.put(doBuild(keyClazz.getName()),doBuild(valueClazz.getName()));
-                    }
-                    value = map;
-                } else {
-                    value = doBuild(field.getType().getName());
-                }
-                field.set(instance, value);
+            if(isByte(type.getTypeName()) || isShort(type.getTypeName()) || isInteger(type.getTypeName()) || isLong(type.getTypeName())) {
+                return 0;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        javaObjectCache.put(className, instance);
-        return instance;
-    }
+            if(isFloat(type.getTypeName()) || isDouble(type.getTypeName())) {
+                return 0.0;
+            }
+            if(isBoolean(type.getTypeName())) {
+                return true;
+            }
+            if(isString(type.getTypeName())) {
+                return "string";
+            }
+            Object instance = null;
+            try {
+                Class clazz = Class.forName(type.getTypeName());
+                if(clazz.isArray()) {
+                    return null;
+                }
+                if(clazz.isInterface()) {
+                    return null;
+                }
+                if(clazz.isEnum()) {
+                    return null;
+                }
+                instance = clazz.newInstance();
+                Field[] fields =clazz.getDeclaredFields();
+                for(Field field : fields) {
+                    field.setAccessible(true);
+                    if(Modifier.isStatic(field.getModifiers())) {
+                        continue;
+                    }
+                    if(clazz.isAssignableFrom(field.getClass()));
+                    Object value = doBuild( field.getGenericType());
+                    field.set(instance, value);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
+            javaObjectCache.put(type.getTypeName(), instance);
+            return instance;
+        }
+    }
 
     private boolean isObject(String className) {
         return "java.lang.object".equals(className);
@@ -135,15 +149,22 @@ public class JavaObjectBuilder {
         return  "java.lang.String".equals(className);
     }
 
-    private boolean isList(Class clazz) {
+    private boolean isList(String className) throws Exception{
+        Class clazz = Class.forName(className);
         return java.util.List.class.isAssignableFrom(clazz);
     }
 
-    private boolean isSet(Class clazz) {
+    private boolean isSet(String className) throws Exception{
+        Class clazz = Class.forName(className);
         return java.util.Set.class.isAssignableFrom(clazz);
     }
 
-    private boolean isMap(Class clazz) {
+    private boolean isMap(String className) throws Exception {
+        Class clazz = Class.forName(className);
         return java.util.Map.class.isAssignableFrom(clazz);
+    }
+
+    private boolean isArray(String className) {
+        return className.endsWith("[]");
     }
  }

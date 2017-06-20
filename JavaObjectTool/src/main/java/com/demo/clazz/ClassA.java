@@ -1,9 +1,6 @@
 package com.demo.clazz;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by medivh on 2017/6/19.
@@ -14,7 +11,7 @@ public class ClassA {
 
     private Integer obj2;
 
-    private HashMap<ClassB,ClassB> obj3;
+    private HashMap<ClassB,ArrayList<TreeMap<ClassC,ClassB>>> obj3;
 
     private HashSet<ClassB> set;
 

@@ -7,6 +7,8 @@ public class ClassB {
 
     private int test;
 
+    private String desc;
+
     public int getTest() {
         return test;
     }

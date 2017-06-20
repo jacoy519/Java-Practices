@@ -5,7 +5,7 @@ package com.demo.clazz;
  */
 public class ClassC {
 
-    public ClassC objC;
+    //public ClassC classC;
 
     public int code = 2;
 }
