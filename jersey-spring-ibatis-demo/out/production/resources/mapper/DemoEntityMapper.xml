@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding= "UTF-8" ?>
+<!DOCTYPE sqlMap PUBLIC "-//ibatis.apache.org//DTD SQL Map 2.0//EN"
+        "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+<sqlMap namespace="demoEntityDao">
+
+    <resultMap class="com.demo.entity.DemoEntity" id="demoEntity">
+        <result property="id" column="ID"/>
+        <result property="reportData" column="REPORT_DATA" javaType="java.lang.String" jdbcType="VACHAR30"/>
+        <result property="codeNo" column="CODE_NO" javaType="java.lang.String" jdbcType="VACHAR30"/>
+    </resultMap>
+
+    <typeAlias alias="demoEntity" type="com.demo.entity.DemoEntity"/>
+
+    <sql id="baseColumn">
+        REPORT_DATA as reportData,
+        CODE_NO as codeNo
+    </sql>
+
+    <select id="queryByCodeNo" parameterClass="map" resultClass="demoEntity">
+        SELECT
+        <include refid="baseColumn"/>
+        FROM t_demo_entity t WHERE t.code_no = #codeNo#
+    </select>
+
+    <select id="queryByCodeNoAndData" parameterClass="map" resultClass="demoEntity">
+        SELECT
+        <include refid="baseColumn"/>
+        FROM t_demo_entity t WHERE t.report_data >= #beginData#
+        and t.report_data  &lt;= #endData#
+        and t.code_no not IN
+        <iterate open="(" close=")" conjunction="," property="codeList" >
+            #codeList[]#
+        </iterate>
+
+    </select>
+
+
+
+</sqlMap>
