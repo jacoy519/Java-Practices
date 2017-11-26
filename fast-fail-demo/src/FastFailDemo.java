@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by medivh on 2017/10/11.
@@ -17,7 +18,6 @@ public class FastFailDemo {
         }
 
         FutureTask test=null;
-        CountDownLatch ;
 
         //设置两个线程同时对list进行操作
         //线程一用迭代器访问list
